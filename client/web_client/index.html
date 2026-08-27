@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NEXUS FRONTIER — Tactical Action & Strategy</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            background-color: #0b0f19;
+            color: #e2e8f0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow: hidden;
+        }
+        #gameCanvas {
+            background: radial-gradient(circle, #151d30 0%, #080c14 100%);
+            border: 2px solid #1e293b;
+            box-shadow: 0 0 30px rgba(0, 242, 254, 0.15);
+        }
+        .hud-panel {
+            background: rgba(15, 23, 42, 0.85);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(56, 189, 248, 0.2);
+        }
+        .glow-cyan {
+            box-shadow: 0 0 15px rgba(6, 182, 212, 0.5);
+        }
+    </style>
+</head>
+<body class="flex flex-col h-screen w-screen p-4 select-none">
+    <!-- Top Header & Scoreboard -->
+    <header class="flex justify-between items-center hud-panel rounded-xl px-6 py-3 mb-3">
+        <div class="flex items-center gap-3">
+            <div class="h-3 w-3 rounded-full bg-cyan-400 animate-pulse glow-cyan"></div>
+            <h1 class="text-xl font-bold tracking-widest text-cyan-400">NEXUS FRONTIER</h1>
+            <span class="text-xs bg-cyan-950 text-cyan-300 px-2 py-0.5 rounded border border-cyan-800">TACTICAL ARENA</span>
+        </div>
+
+        <div class="flex items-center gap-8 text-center font-mono">
+            <div class="text-blue-400 font-bold text-lg">SOLARIS (TEAM A): <span id="scoreA">0</span></div>
+            <div class="text-gray-400 font-semibold bg-gray-900/80 px-4 py-1 rounded-lg border border-gray-800">
+                TIME: <span id="matchTime" class="text-white">600</span>s
+            </div>
+            <div class="text-rose-400 font-bold text-lg">IRON SYNDICATE (TEAM B): <span id="scoreB">0</span></div>
+        </div>
+
+        <div class="flex gap-2 text-xs font-mono">
+            <span class="bg-emerald-950 text-emerald-300 px-2.5 py-1 rounded border border-emerald-800">SERVER: 30 HZ</span>
+            <span class="bg-indigo-950 text-indigo-300 px-2.5 py-1 rounded border border-indigo-800" id="pingDisplay">PING: 18ms</span>
+        </div>
+    </header>
+
+    <!-- Main Game Area -->
+    <main class="flex-1 flex gap-4 min-h-0">
+        <!-- Canvas Viewport -->
+        <div class="flex-1 relative rounded-xl overflow-hidden flex items-center justify-center">
+            <canvas id="gameCanvas" width="950" height="600" class="rounded-xl"></canvas>
+            
+            <!-- Controls Overlay Guide -->
+            <div class="absolute bottom-4 left-4 hud-panel p-3 rounded-lg text-xs space-y-1 text-gray-300 border border-gray-800 pointer-events-none">
+                <p><span class="text-cyan-400 font-bold">WASD / Arrow Keys</span>: Move Character</p>
+                <p><span class="text-cyan-400 font-bold">Mouse Click</span>: Fire Active Weapon</p>
+                <p><span class="text-cyan-400 font-bold">Key [1]</span>: Shield Dome | <span class="text-cyan-400 font-bold">Key [2]</span>: EMP Shockwave</p>
+                <p><span class="text-cyan-400 font-bold">Key [3]</span>: Recon Radar | <span class="text-cyan-400 font-bold">Key [4]</span>: Nanite Heal</p>
+            </div>
+        </div>
+
+        <!-- Tactical HUD & Telemetry Sidebar -->
+        <aside class="w-80 flex flex-col gap-3">
+            <!-- Player Tactical Stats -->
+            <div class="hud-panel p-4 rounded-xl space-y-3">
+                <div class="flex justify-between items-center">
+                    <span class="text-sm font-bold text-cyan-300">TACTICAL OPERATIVE</span>
+                    <span class="text-xs font-mono text-cyan-400 bg-cyan-950 px-2 py-0.5 rounded">LVL 2</span>
+                </div>
+
+                <!-- Health Bar -->
+                <div>
+                    <div class="flex justify-between text-xs font-mono mb-1">
+                        <span class="text-emerald-400">HEALTH</span>
+                        <span id="healthText" class="text-emerald-300">100 / 100</span>
+                    </div>
+                    <div class="w-full bg-gray-950 rounded-full h-3 overflow-hidden border border-gray-800">
+                        <div id="healthBar" class="bg-gradient-to-r from-emerald-600 to-emerald-400 h-full transition-all duration-100" style="width: 100%"></div>
+                    </div>
+                </div>
+
+                <!-- Shield Bar -->
+                <div>
+                    <div class="flex justify-between text-xs font-mono mb-1">
+                        <span class="text-cyan-400">SHIELD</span>
+                        <span id="shieldText" class="text-cyan-300">100 / 100</span>
+                    </div>
+                    <div class="w-full bg-gray-950 rounded-full h-3 overflow-hidden border border-gray-800">
+                        <div id="shieldBar" class="bg-gradient-to-r from-cyan-600 to-cyan-400 h-full transition-all duration-100" style="width: 100%"></div>
+                    </div>
+                </div>
+
+                <!-- Weapon Slot -->
+                <div class="pt-2 border-t border-gray-800 flex justify-between items-center text-xs">
+                    <div>
+                        <div class="text-gray-400">WEAPON</div>
+                        <div id="weaponName" class="font-bold text-white">V-44 Kinetic Liberator</div>
+                    </div>
+                    <div class="text-right font-mono">
+                        <div class="text-cyan-400 font-bold text-base" id="ammoText">30 / 180</div>
+                        <div class="text-gray-500 text-[10px]">AUTO RELOAD</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Objectives & Territory Status -->
+            <div class="hud-panel p-4 rounded-xl flex-1 flex flex-col space-y-3">
+                <span class="text-sm font-bold text-cyan-300">STRATEGIC SECTORS</span>
+                
+                <div class="space-y-2 text-xs font-mono flex-1">
+                    <div class="bg-gray-900/60 p-2.5 rounded-lg border border-gray-800 flex justify-between items-center">
+                        <div>
+                            <div class="font-bold text-cyan-300">Alpha Fuel Plant</div>
+                            <div class="text-[10px] text-gray-400" id="terrA_owner">Owner: NEUTRAL</div>
+                        </div>
+                        <span id="terrA_prog" class="text-cyan-400 font-bold">0%</span>
+                    </div>
+
+                    <div class="bg-gray-900/60 p-2.5 rounded-lg border border-gray-800 flex justify-between items-center">
+                        <div>
+                            <div class="font-bold text-amber-300">Central Ion Spire</div>
+                            <div class="text-[10px] text-gray-400" id="terrC_owner">Owner: NEUTRAL</div>
+                        </div>
+                        <span id="terrC_prog" class="text-amber-400 font-bold">0%</span>
+                    </div>
+
+                    <div class="bg-gray-900/60 p-2.5 rounded-lg border border-gray-800 flex justify-between items-center">
+                        <div>
+                            <div class="font-bold text-rose-300">Bravo Relay</div>
+                            <div class="text-[10px] text-gray-400" id="terrB_owner">Owner: NEUTRAL</div>
+                        </div>
+                        <span id="terrB_prog" class="text-rose-400 font-bold">0%</span>
+                    </div>
+                </div>
+
+                <!-- Combat Event Feed -->
+                <div class="border-t border-gray-800 pt-2">
+                    <div class="text-[11px] font-bold text-gray-400 mb-1">COMBAT LOG</div>
+                    <div id="combatLog" class="h-24 overflow-y-auto font-mono text-[10px] space-y-1 text-gray-400">
+                        <p class="text-cyan-400">> Match initialized on dedicated server</p>
+                    </div>
+                </div>
+            </div>
+        </aside>
+    </main>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // Player State
+        const player = {
+            x: 180,
+            y: 300,
+            radius: 14,
+            speed: 3.5,
+            health: 100,
+            shield: 100,
+            ammo: 30,
+            reserveAmmo: 180,
+            color: '#06b6d4',
+            team: 'Team_A',
+            isShieldDomeActive: false,
+            shieldDomeTime: 0
+        };
+
+        // Enemy AI Bots
+        const bots = [
+            { id: 'bot_01', x: 750, y: 150, radius: 14, health: 100, shield: 100, color: '#f43f5e', targetX: 475, targetY: 300, fireCooldown: 0 },
+            { id: 'bot_02', x: 780, y: 300, radius: 14, health: 100, shield: 100, color: '#f43f5e', targetX: 475, targetY: 300, fireCooldown: 0 },
+            { id: 'bot_03', x: 750, y: 450, radius: 14, health: 100, shield: 100, color: '#f43f5e', targetX: 475, targetY: 300, fireCooldown: 0 },
+            { id: 'ally_01', x: 200, y: 150, radius: 14, health: 100, shield: 100, color: '#38bdf8', targetX: 475, targetY: 300, fireCooldown: 0 },
+            { id: 'ally_02', x: 200, y: 450, radius: 14, health: 100, shield: 100, color: '#38bdf8', targetX: 475, targetY: 300, fireCooldown: 0 }
+        ];
+
+        // Territories
+        const territories = [
+            { id: 'alpha', name: 'Alpha Fuel Plant', x: 220, y: 300, radius: 55, progress: 0, owner: 'NEUTRAL', color: '#06b6d4' },
+            { id: 'central', name: 'Central Ion Spire', x: 475, y: 300, radius: 70, progress: 0, owner: 'NEUTRAL', color: '#f59e0b' },
+            { id: 'bravo', name: 'Bravo Relay', x: 730, y: 300, radius: 55, progress: 0, owner: 'NEUTRAL', color: '#f43f5e' }
+        ];
+
+        let projectiles = [];
+        let scores = { Team_A: 0, Team_B: 0 };
+        let matchTime = 600;
+        const keys = {};
+
+        // Input Listeners
+        window.addEventListener('keydown', (e) => {
+            keys[e.key.toLowerCase()] = true;
+            if (e.key === '1') activateAbility('SHIELD_DOME');
+            if (e.key === '2') activateAbility('EMP_BURST');
+            if (e.key === '3') activateAbility('RECON_RADAR');
+            if (e.key === '4') activateAbility('NANO_HEAL');
+        });
+        window.addEventListener('keyup', (e) => { keys[e.key.toLowerCase()] = false; });
+
+        canvas.addEventListener('mousedown', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            const mouseY = e.clientY - rect.top;
+            fireProjectile(player.x, player.y, mouseX, mouseY, true);
+        });
+
+        function logCombat(msg) {
+            const logBox = document.getElementById('combatLog');
+            const p = document.createElement('p');
+            p.textContent = `> ${msg}`;
+            logBox.appendChild(p);
+            logBox.scrollTop = logBox.scrollHeight;
+        }
+
+        function fireProjectile(fromX, fromY, toX, toY, isPlayer) {
+            if (isPlayer) {
+                if (player.ammo <= 0) {
+                    player.ammo = 30; // Quick reload
+                    logCombat('Reloading V-44 Kinetic Liberator...');
+                    return;
+                }
+                player.ammo--;
+                document.getElementById('ammoText').textContent = `${player.ammo} / ${player.reserveAmmo}`;
+            }
+
+            const dx = toX - fromX;
+            const dy = toY - fromY;
+            const dist = Math.hypot(dx, dy);
+            projectiles.push({
+                x: fromX,
+                y: fromY,
+                vx: (dx / dist) * 12,
+                vy: (dy / dist) * 12,
+                isPlayer: isPlayer,
+                lifespan: 60
+            });
+        }
+
+        function activateAbility(type) {
+            if (type === 'SHIELD_DOME') {
+                player.isShieldDomeActive = true;
+                player.shieldDomeTime = 180; // 6 seconds at 30fps
+                logCombat('Aegis Shield Dome deployed!');
+            } else if (type === 'EMP_BURST') {
+                logCombat('EMP Shockwave triggered! Hostile shields disrupted.');
+                bots.forEach(b => {
+                    if (b.color === '#f43f5e' && Math.hypot(b.x - player.x, b.y - player.y) < 250) {
+                        b.shield = 0;
+                    }
+                });
+            } else if (type === 'NANO_HEAL') {
+                player.health = Math.min(100, player.health + 40);
+                logCombat('Nanite restoration stim injected (+40 HP)');
+            } else if (type === 'RECON_RADAR') {
+                logCombat('Tactical Sonar Sweep active: All positions mapped.');
+            }
+        }
+
+        // Game Loop
+        function update() {
+            // Player Movement
+            if (keys['w'] || keys['arrowup']) player.y = Math.max(player.radius, player.y - player.speed);
+            if (keys['s'] || keys['arrowdown']) player.y = Math.min(canvas.height - player.radius, player.y + player.speed);
+            if (keys['a'] || keys['arrowleft']) player.x = Math.max(player.radius, player.x - player.speed);
+            if (keys['d'] || keys['arrowright']) player.x = Math.min(canvas.width - player.radius, player.x + player.speed);
+
+            if (player.isShieldDomeActive) {
+                player.shieldDomeTime--;
+                if (player.shieldDomeTime <= 0) player.isShieldDomeActive = false;
+            }
+
+            // Shield Passive Regeneration
+            if (player.shield < 100) player.shield = Math.min(100, player.shield + 0.1);
+
+            // Update Bots
+            bots.forEach(bot => {
+                if (bot.health <= 0) return;
+
+                // Move toward target position
+                const dx = bot.targetX - bot.x;
+                const dy = bot.targetY - bot.y;
+                const dist = Math.hypot(dx, dy);
+                if (dist > 10) {
+                    bot.x += (dx / dist) * 1.5;
+                    bot.y += (dy / dist) * 1.5;
+                } else {
+                    bot.targetX = Math.random() * (canvas.width - 200) + 100;
+                    bot.targetY = Math.random() * (canvas.height - 100) + 50;
+                }
+
+                // Bot Shooting
+                bot.fireCooldown++;
+                if (bot.fireCooldown > 50) {
+                    bot.fireCooldown = 0;
+                    if (bot.color === '#f43f5e') {
+                        // Enemy fires at player
+                        if (Math.hypot(player.x - bot.x, player.y - bot.y) < 350) {
+                            fireProjectile(bot.x, bot.y, player.x, player.y, false);
+                        }
+                    } else {
+                        // Ally fires at nearest enemy
+                        const enemy = bots.find(b => b.color === '#f43f5e' && b.health > 0);
+                        if (enemy) fireProjectile(bot.x, bot.y, enemy.x, enemy.y, true);
+                    }
+                }
+            });
+
+            // Update Projectiles & Collisions
+            for (let i = projectiles.length - 1; i >= 0; i--) {
+                const p = projectiles[i];
+                p.x += p.vx;
+                p.y += p.vy;
+                p.lifespan--;
+
+                if (p.lifespan <= 0 || p.x < 0 || p.x > canvas.width || p.y < 0 || p.y > canvas.height) {
+                    projectiles.splice(i, 1);
+                    continue;
+                }
+
+                // Check hit against player
+                if (!p.isPlayer && Math.hypot(player.x - p.x, player.y - p.y) < player.radius + (player.isShieldDomeActive ? 25 : 0)) {
+                    projectiles.splice(i, 1);
+                    if (!player.isShieldDomeActive) {
+                        if (player.shield > 0) player.shield = Math.max(0, player.shield - 20);
+                        else player.health = Math.max(0, player.health - 20);
+                    }
+                    continue;
+                }
+
+                // Check hit against bots
+                if (p.isPlayer) {
+                    for (let b of bots) {
+                        if (b.color === '#f43f5e' && b.health > 0 && Math.hypot(b.x - p.x, b.y - p.y) < b.radius) {
+                            projectiles.splice(i, 1);
+                            if (b.shield > 0) b.shield = Math.max(0, b.shield - 35);
+                            else b.health = Math.max(0, b.health - 35);
+
+                            if (b.health <= 0) {
+                                scores.Team_A += 1;
+                                document.getElementById('scoreA').textContent = scores.Team_A;
+                                logCombat(`Hostile eliminated! (+1 Score)`);
+                            }
+                            break;
+                        }
+                    }
+                }
+            }
+
+            // Update Territory Captures
+            territories.forEach(t => {
+                const distToPlayer = Math.hypot(player.x - t.x, player.y - t.y);
+                if (distToPlayer <= t.radius) {
+                    t.progress = Math.min(100, t.progress + 0.5);
+                    if (t.progress >= 100 && t.owner !== 'SOLARIS') {
+                        t.owner = 'SOLARIS';
+                        logCombat(`${t.name} captured by Solaris Hegemony!`);
+                    }
+                }
+            });
+
+            // Update HUD text
+            document.getElementById('healthText').textContent = `${Math.round(player.health)} / 100`;
+            document.getElementById('healthBar').style.width = `${Math.max(0, player.health)}%`;
+            document.getElementById('shieldText').textContent = `${Math.round(player.shield)} / 100`;
+            document.getElementById('shieldBar').style.width = `${Math.max(0, player.shield)}%`;
+
+            document.getElementById('terrA_prog').textContent = `${Math.round(territories[0].progress)}%`;
+            document.getElementById('terrA_owner').textContent = `Owner: ${territories[0].owner}`;
+            document.getElementById('terrC_prog').textContent = `${Math.round(territories[1].progress)}%`;
+            document.getElementById('terrC_owner').textContent = `Owner: ${territories[1].owner}`;
+            document.getElementById('terrB_prog').textContent = `${Math.round(territories[2].progress)}%`;
+            document.getElementById('terrB_owner').textContent = `Owner: ${territories[2].owner}`;
+        }
+
+        // Draw Scene
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Draw Grid Lines
+            ctx.strokeStyle = 'rgba(30, 41, 59, 0.4)';
+            ctx.lineWidth = 1;
+            for (let x = 0; x < canvas.width; x += 40) {
+                ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke();
+            }
+            for (let y = 0; y < canvas.height; y += 40) {
+                ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke();
+            }
+
+            // Draw Territory Zones
+            territories.forEach(t => {
+                ctx.beginPath();
+                ctx.arc(t.x, t.y, t.radius, 0, Math.PI * 2);
+                ctx.fillStyle = t.owner === 'SOLARIS' ? 'rgba(6, 182, 212, 0.15)' : 'rgba(100, 116, 139, 0.1)';
+                ctx.fill();
+                ctx.strokeStyle = t.color;
+                ctx.lineWidth = 2;
+                ctx.stroke();
+
+                // Territory Label
+                ctx.fillStyle = '#94a3b8';
+                ctx.font = '11px monospace';
+                ctx.textAlign = 'center';
+                ctx.fillText(t.name, t.x, t.y - t.radius - 8);
+                ctx.fillText(`${Math.round(t.progress)}%`, t.x, t.y + 4);
+            });
+
+            // Draw Shield Dome if Active
+            if (player.isShieldDomeActive) {
+                ctx.beginPath();
+                ctx.arc(player.x, player.y, 35, 0, Math.PI * 2);
+                ctx.fillStyle = 'rgba(6, 182, 212, 0.25)';
+                ctx.fill();
+                ctx.strokeStyle = '#22d3ee';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+            }
+
+            // Draw Player
+            ctx.beginPath();
+            ctx.arc(player.x, player.y, player.radius, 0, Math.PI * 2);
+            ctx.fillStyle = player.color;
+            ctx.fill();
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            // Draw Player Label
+            ctx.fillStyle = '#38bdf8';
+            ctx.font = 'bold 11px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('YOU (COMMANDER)', player.x, player.y - 20);
+
+            // Draw Bots
+            bots.forEach(b => {
+                if (b.health <= 0) return;
+                ctx.beginPath();
+                ctx.arc(b.x, b.y, b.radius, 0, Math.PI * 2);
+                ctx.fillStyle = b.color;
+                ctx.fill();
+                ctx.strokeStyle = '#ffffff';
+                ctx.lineWidth = 1.5;
+                ctx.stroke();
+
+                ctx.fillStyle = b.color;
+                ctx.font = '10px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText(b.id, b.x, b.y - 18);
+            });
+
+            // Draw Projectiles
+            projectiles.forEach(p => {
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, 3.5, 0, Math.PI * 2);
+                ctx.fillStyle = p.isPlayer ? '#38bdf8' : '#fb7185';
+                ctx.fill();
+            });
+        }
+
+        function gameLoop() {
+            update();
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
+
+        gameLoop();
+    </script>
+</body>
+</html>
