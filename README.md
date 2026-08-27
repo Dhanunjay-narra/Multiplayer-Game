@@ -1,8 +1,8 @@
 # NEXUS FRONTIER
 
 [![CI Pipeline](https://github.com/Dhanunjay-narra/Multiplayer-Game/actions/workflows/ci.yml/badge.svg)](https://github.com/Dhanunjay-narra/Multiplayer-Game/actions)
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
+[![License: Proprietary](https://img.shields.io/badge/License-Proprietary-red.svg)](LICENSE)
 
 **NEXUS FRONTIER** is a dedicated-server multiplayer tactical action, strategy, and exploration game platform. Players enter dynamically evolving futuristic worlds where maps, resources, weather, AI factions, and territory control shift between matches. Every multiplayer match directly alters the persistent world state.
 
@@ -120,4 +120,4 @@ python -m tools.bot_orchestrator.runner --players 16 --duration 60
 ---
 
 ## License
-Distributed under the MIT License. See `LICENSE` for more information.
+Proprietary and Confidential. Copyright (c) 2026 Nexus Frontier Technologies. All Rights Reserved. See `LICENSE` for details.
