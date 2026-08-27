@@ -1,0 +1,60 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: nexus-postgres
+    environment:
+      POSTGRES_USER: nexus_user
+      POSTGRES_PASSWORD: nexus_password
+      POSTGRES_DB: nexus_frontier
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U nexus_user -d nexus_frontier"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: nexus-redis
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  gateway:
+    build:
+      context: ..
+      dockerfile: infrastructure/docker/Dockerfile.gateway
+    container_name: nexus-gateway
+    environment:
+      DATABASE_URL: "postgresql+asyncpg://nexus_user:nexus_password@postgres:5432/nexus_frontier"
+      REDIS_URL: "redis://redis:6379/0"
+      JWT_SECRET_KEY: "nexus-production-super-secret-key"
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  gameserver:
+    build:
+      context: ..
+      dockerfile: infrastructure/docker/Dockerfile.gameserver
+    container_name: nexus-gameserver-01
+    ports:
+      - "8765:8765"
+    depends_on:
+      - gateway
+
+volumes:
+  postgres_data:
