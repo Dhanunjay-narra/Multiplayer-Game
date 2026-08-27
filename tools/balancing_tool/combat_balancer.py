@@ -1,5 +1,9 @@
 """Combat weapon DPS, TTK (Time-To-Kill), and balance analyzer."""
+import os
+import sys
 from typing import Any, Dict, List
+
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 from server.combat.weapons import WEAPON_DEFINITIONS, WeaponType
 
 

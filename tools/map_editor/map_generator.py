@@ -1,7 +1,11 @@
 """Procedural map generator for territories, resource nodes, and cover positions."""
+import os
+import sys
 import json
 import random
 from typing import Any, Dict, List
+
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 from shared.math.vector import Vector3D
 from shared.schemas.world_schemas import TerritoryStateData, EnergyNodeData
 from shared.enums.game_enums import FactionType, TerritoryState

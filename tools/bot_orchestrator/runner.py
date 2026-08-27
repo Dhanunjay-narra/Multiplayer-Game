@@ -1,8 +1,12 @@
 """High-concurrency match stress tester and automated bot runner."""
+import os
+import sys
 import asyncio
 import time
 import argparse
 from typing import Any, Dict, List
+
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 from server.game_server.game_loop import DedicatedGameServer
 from client.bot_client.bot_runner import SimulatedBotPlayer
 from shared.math.vector import Vector3D
